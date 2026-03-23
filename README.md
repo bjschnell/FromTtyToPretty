@@ -5,7 +5,7 @@ Post-install bootstrap scripts for Arch Linux + Hyprland. Pick a profile, get a 
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOU/FromTtyToPretty.git
+git clone https://github.com/bjschnell/FromTtyToPretty.git
 cd FromTtyToPretty
 chmod +x bootstrap.sh scripts/*.sh
 ./bootstrap.sh
