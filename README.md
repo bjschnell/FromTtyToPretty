@@ -82,6 +82,37 @@ Set `DOTFILES_REMOTE` in `scripts/05-dotfiles.sh` to your repo URL for automatic
    ```
 3. The tags after the last `:` control which profiles include it
 
+## Versioning
+
+Uses semantic versioning. The current version lives in `VERSION` and is shown via `./bootstrap.sh --version`.
+
+### Commit Convention
+
+This repo uses [Conventional Commits](https://www.conventionalcommits.org/) for auto-generated changelogs:
+
+```
+feat: add nvidia driver script
+fix: correct paru clone URL
+docs: update profile table in README
+refactor: simplify package arrays
+chore: clean up temp directory handling
+```
+
+### Cutting a Release
+
+```bash
+./release.sh patch    # 0.1.0 -> 0.1.1
+./release.sh minor    # 0.1.0 -> 0.2.0
+./release.sh major    # 0.1.0 -> 1.0.0
+```
+
+This bumps `VERSION`, generates a changelog entry from commits since the last tag, commits, and creates a git tag. Then push:
+
+```bash
+git push origin main
+git push origin v0.2.0
+```
+
 ## License
 
 MIT

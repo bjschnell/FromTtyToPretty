@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Arch Linux + Hyprland Bootstrap
+# FromTtyToPretty — Arch Linux + Hyprland post-install bootstrap
 #
 # Usage:
 #   ./bootstrap.sh                    Interactive profile picker
 #   ./bootstrap.sh --profile full     Run a preset profile
 #   ./bootstrap.sh --interactive      Ask per-script yes/no
 #   ./bootstrap.sh --list             Show available profiles
-#
-# Profiles:
-#   minimal  — paru, core packages, dotfiles
-#   desktop  — minimal + hyprland rice
-#   homelab  — minimal + docker + homelab tools (no desktop)
-#   full     — everything
+#   ./bootstrap.sh --version          Show version
 # ============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_DIR="$SCRIPT_DIR/scripts"
+VERSION_FILE="$SCRIPT_DIR/VERSION"
 
-# Colors
+# -- Colors ----------------------------------------------------------------
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -29,14 +26,24 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-log()  { echo -e "${GREEN}[✓]${NC} $1"; }
-warn() { echo -e "${YELLOW}[!]${NC} $1"; }
-err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
-info() { echo -e "${CYAN}[i]${NC} $1"; }
+log()  { echo -e "${GREEN}[ok]${NC} $1"; }
+warn() { echo -e "${YELLOW}[!!]${NC} $1"; }
+err()  { echo -e "${RED}[!!]${NC} $1"; exit 1; }
+info() { echo -e "${CYAN}[..]${NC} $1"; }
 
-# ── Script registry ──────────────────────────────────────────────────────────
+# -- Version ---------------------------------------------------------------
+
+get_version() {
+    if [[ -f "$VERSION_FILE" ]]; then
+        tr -d '[:space:]' < "$VERSION_FILE"
+    else
+        echo "unknown"
+    fi
+}
+
+# -- Script registry -------------------------------------------------------
 # Format: "filename:description:tags"
-# Tags determine which profiles include the script.
+# Tags control which profiles include the script.
 
 SCRIPTS=(
     "00-paru.sh:Install paru AUR helper:minimal,desktop,homelab,full"
@@ -49,7 +56,7 @@ SCRIPTS=(
 
 PROFILES=("minimal" "desktop" "homelab" "full")
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# -- Helpers ----------------------------------------------------------------
 
 get_script_name() { echo "${1%%:*}"; }
 get_script_desc() { local tmp="${1#*:}"; echo "${tmp%%:*}"; }
@@ -71,9 +78,9 @@ run_script() {
     fi
 
     echo ""
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}================================================${NC}"
     info "Running ${BOLD}$script${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}================================================${NC}"
     echo ""
 
     bash "$path"
@@ -103,19 +110,21 @@ ask_yes_no() {
     done
 }
 
-# ── Banner ───────────────────────────────────────────────────────────────────
+# -- Banner -----------------------------------------------------------------
 
 show_banner() {
     echo ""
     echo -e "${CYAN}${BOLD}"
-    echo "   ╔═══════════════════════════════════════════╗"
-    echo "   ║       FromTtyToPretty                     ║"
-    echo "   ║      Arch + Hyprland post-install         ║"
-    echo "   ╚═══════════════════════════════════════════╝"
+    echo "   +-------------------------------------------+"
+    echo "   |        FromTtyToPretty                     |"
+    echo "   |      Arch + Hyprland post-install          |"
+    echo "   +-------------------------------------------+"
     echo -e "${NC}"
+    echo -e "  ${DIM}v$(get_version)${NC}"
+    echo ""
 }
 
-# ── Profile display ──────────────────────────────────────────────────────────
+# -- Profile display --------------------------------------------------------
 
 show_profiles() {
     echo ""
@@ -132,16 +141,16 @@ show_profiles() {
             tags="$(get_script_tags "$entry")"
 
             if script_in_profile "$tags" "$profile"; then
-                echo -e "    ${GREEN}✓${NC} $desc  ${DIM}($name)${NC}"
+                echo -e "    ${GREEN}+${NC} $desc  ${DIM}($name)${NC}"
             else
-                echo -e "    ${DIM}· $desc  ($name)${NC}"
+                echo -e "    ${DIM}- $desc  ($name)${NC}"
             fi
         done
         echo ""
     done
 }
 
-# ── Run profile ──────────────────────────────────────────────────────────────
+# -- Run profile ------------------------------------------------------------
 
 run_profile() {
     local profile="$1"
@@ -149,7 +158,6 @@ run_profile() {
     info "Running profile: ${BOLD}$profile${NC}"
     echo ""
 
-    # Show what will run
     echo -e "  ${BOLD}This will run:${NC}"
     for entry in "${SCRIPTS[@]}"; do
         local name desc tags
@@ -158,7 +166,7 @@ run_profile() {
         tags="$(get_script_tags "$entry")"
 
         if script_in_profile "$tags" "$profile"; then
-            echo -e "    ${GREEN}✓${NC} $desc"
+            echo -e "    ${GREEN}+${NC} $desc"
         fi
     done
     echo ""
@@ -187,15 +195,13 @@ run_profile() {
     done
 
     echo ""
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    log "Profile ${BOLD}$profile${NC} complete — ran $count scripts, skipped $skipped"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    log "Profile ${BOLD}$profile${NC} complete -- ran $count scripts, skipped $skipped"
 }
 
-# ── Interactive mode ─────────────────────────────────────────────────────────
+# -- Interactive mode -------------------------------------------------------
 
 run_interactive() {
-    info "Interactive mode — you'll be asked about each script."
+    info "Interactive mode -- you'll be asked about each script."
 
     local ran=0
     local skipped=0
@@ -219,12 +225,10 @@ run_interactive() {
     done
 
     echo ""
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    log "Done — ran $ran scripts, skipped $skipped"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    log "Done -- ran $ran scripts, skipped $skipped"
 }
 
-# ── Profile picker ───────────────────────────────────────────────────────────
+# -- Profile picker ---------------------------------------------------------
 
 pick_profile() {
     echo -e "  ${BOLD}Pick a profile or go interactive:${NC}"
@@ -234,8 +238,8 @@ pick_profile() {
     echo "  [3] homelab     minimal + docker + homelab tools"
     echo "  [4] full        everything"
     echo ""
-    echo "  [i] interactive — choose per script"
-    echo "  [l] list        — show what's in each profile"
+    echo "  [i] interactive -- choose per script"
+    echo "  [l] list        -- show what's in each profile"
     echo "  [q] quit"
     echo ""
 
@@ -254,9 +258,17 @@ pick_profile() {
     done
 }
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# -- Main -------------------------------------------------------------------
 
 main() {
+    case "${1:-}" in
+        --version|-v|-V)
+            echo "FromTtyToPretty v$(get_version)"
+            exit 0
+            ;;
+        *) ;;
+    esac
+
     show_banner
 
     case "${1:-}" in
@@ -281,15 +293,14 @@ main() {
             run_interactive
             ;;
         --help|-h)
-            echo ""
             echo "Usage:"
             echo "  ./bootstrap.sh                     Interactive profile picker"
             echo "  ./bootstrap.sh --profile <name>    Run a preset profile"
             echo "  ./bootstrap.sh --interactive       Ask per-script yes/no"
             echo "  ./bootstrap.sh --list              Show profiles and their scripts"
+            echo "  ./bootstrap.sh --version           Show version"
             echo ""
             echo "Profiles: ${PROFILES[*]}"
-            echo ""
             ;;
         "")
             pick_profile
